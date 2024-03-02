@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { Audio } from 'react-loader-spinner';
+import SearchForm from "./components/SearchForm"; // Remove curly braces for default export
 
 const ArticleList = ({ items }) => (
   <ul>
@@ -16,31 +18,49 @@ const ArticleList = ({ items }) => (
 const App = () => {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  const fetchArticlesWithTopic = async (topic) => {
+    const response = await axios.get(
+      `https://hn.algolia.com/api/v1/search?query=${topic}`
+    );
+    return response.data.hits;
+  };
+
+  const handleSearch = async (topic) => {
+    try {
+      setArticles([]);
+      setError(false);
+      setLoading(true);
+      const data = await fetchArticlesWithTopic(topic);
+      setArticles(data);
+    } catch (error) {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchArticles() {
-      try {
-        // Set loading indicator to true before the request
-        setLoading(true);
-        const response = await axios.get(
-          "https://hn.algolia.com/api/v1/search?query=react"
-        );
-        setArticles(response.data.hits);
-      } catch (error) {
-        // Handle errors here
-      } finally {
-        // Set loading indicator back to false after the request
-        setLoading(false);
-      }
-    }
-
-    fetchArticles();
+    fetchArticlesWithTopic('react'); // Fetch articles on initial render
   }, []);
 
   return (
     <div>
       <h1>Latest articles</h1>
-      {loading && <p>Loading data, please wait...</p>}
+      <SearchForm onSearch={handleSearch} />
+      {loading && (
+        <Audio
+          height={80}
+          width={80}
+          radius={9}
+          color="green"
+          ariaLabel="three-dots-loading"
+          wrapperStyle={{ textAlign: 'center' }}
+          wrapperClass="loader-wrapper"
+        />
+      )}
+      {error && <p>Whoops, something went wrong! Please try again later.</p>} {/* Assuming Error is a built-in component */}
       {articles.length > 0 && <ArticleList items={articles} />}
     </div>
   );
